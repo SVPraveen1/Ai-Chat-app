@@ -135,13 +135,13 @@ Keep the analysis under 150 words and make it actionable.`
   async translateText(text: string, targetLanguage: string, context?: string): Promise<string> {
     try {
       let prompt = `Translate this text to ${targetLanguage}:
-"${text}"`
+"${text}"
+
+Important: Return ONLY the translated text without any explanations, notes, or formatting. No introduction, no quotation marks surrounding the translation, just the pure translated text.`
 
       if (context) {
-        prompt += `\n\nContext from recent conversation:
-${context}
-
-Translate with appropriate tone based on the context.`
+        prompt += `\n\nContext from recent conversation for tone reference (but do not translate this context, just use it for understanding tone):
+${context}`
       }
 
       const result = await this.model.generateContent(prompt)

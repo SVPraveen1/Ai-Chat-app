@@ -52,6 +52,14 @@ const ChatInterface = () => {
   }, [user])
 
   useEffect(() => {
+    // Auto-resize textarea when component mounts
+    if (textAreaRef.current) {
+      textAreaRef.current.style.height = 'auto'
+      textAreaRef.current.style.height = `${Math.min(textAreaRef.current.scrollHeight, 200)}px`
+    }
+  }, [newMessage])
+
+  useEffect(() => {
     if (selectedConversationId) {
       fetchMessages()
       subscribeToMessages()
@@ -186,7 +194,14 @@ const ChatInterface = () => {
 
   const replaceMessageText = (text: string) => {
     setNewMessage(text)
-    textAreaRef.current?.focus()
+    // Force to run on next tick to ensure DOM is updated
+    setTimeout(() => {
+      if (textAreaRef.current) {
+        textAreaRef.current.focus()
+        textAreaRef.current.style.height = 'auto'
+        textAreaRef.current.style.height = `${Math.min(textAreaRef.current.scrollHeight, 200)}px`
+      }
+    }, 0)
   }
 
   const handleEmojiSelect = (emoji: string) => {
@@ -325,7 +340,12 @@ const ChatInterface = () => {
                     <textarea
                       ref={textAreaRef}
                       value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
+                      onChange={(e) => {
+                        setNewMessage(e.target.value)
+                        // Auto-resize the textarea based on content
+                        e.target.style.height = 'auto'
+                        e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`
+                      }}
                       onKeyPress={handleKeyPress}
                       placeholder="Type a message..."
                       className="w-full bg-gray-700 text-white rounded-lg px-4 py-3 pr-12 resize-none max-h-28 min-h-[48px] focus:outline-none focus:ring-2 focus:ring-purple-500 scrollbar-thin scrollbar-thumb-purple-600/40 scrollbar-track-transparent"
