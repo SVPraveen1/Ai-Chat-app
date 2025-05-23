@@ -100,7 +100,7 @@ const AICopilot: React.FC<AICopilotProps> = ({
         clearTimeout(suggestionTimeoutRef.current)
       }
     }
-  }, [currentInput])
+  }, [currentInput, selectedText])
 
   useEffect(() => {
     if (conversationHistory.length > 2) {
@@ -116,8 +116,15 @@ const AICopilot: React.FC<AICopilotProps> = ({
 
   const generateSmartSuggestion = async () => {
     try {
-      const result = await geminiService.generateSuggestion(conversationHistory, currentInput)
-      setSuggestion(result)
+      // If there's selected text, get suggestions specifically for that text
+      if (selectedText) {
+        const result = await geminiService.generateSuggestionForSelectedText(selectedText, currentInput)
+        setSuggestion(result)
+      } else {
+        // Otherwise use the original behavior
+        const result = await geminiService.generateSuggestion(conversationHistory, currentInput)
+        setSuggestion(result)
+      }
     } catch (error) {
       console.error('Error generating suggestion:', error)
     }
@@ -188,20 +195,30 @@ const AICopilot: React.FC<AICopilotProps> = ({
 
   const handleSmartInputSubmit = async () => {
     if (!smartInput.trim()) return
+    
+    if (!selectedText) {
+      toast({
+        title: 'No text selected',
+        description: 'Please select the text you want to modify',
+        variant: 'destructive'
+      })
+      return
+    }
 
     setIsProcessing(true)
     try {
-      const result = await geminiService.generateSuggestion(conversationHistory, smartInput)
+      // Pass the selectedText and smartInput as instructions to process the text
+      const result = await geminiService.processTextWithInstructions(selectedText, smartInput)
       onReplaceText(result)
       setSmartInput('')
       toast({
-        title: 'Smart suggestion applied',
-        description: 'Your message has been enhanced with AI',
+        title: 'Changes applied',
+        description: 'Your selected text has been modified according to your instructions',
       })
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to generate smart suggestion',
+        description: 'Failed to apply changes to the selected text',
         variant: 'destructive'
       })
     } finally {
@@ -328,11 +345,11 @@ const AICopilot: React.FC<AICopilotProps> = ({
                 
                 <Card className="bg-gray-700 border-gray-600">
                   <CardContent className="p-3">
-                    <p className="text-sm text-gray-300 mb-2">Ask AI to improve your message:</p>
+                    <p className="text-sm text-gray-300 mb-2">Describe changes for selected text:</p>
                     <Textarea
                       value={smartInput}
                       onChange={(e) => setSmartInput(e.target.value)}
-                      placeholder="Type your message idea here..."
+                      placeholder="Enter instructions like 'make it more formal' or 'translate to Spanish'..."
                       className="bg-gray-800 border-gray-600 text-white text-sm mb-2 min-h-[60px]"
                     />
                     <Button
@@ -342,7 +359,7 @@ const AICopilot: React.FC<AICopilotProps> = ({
                       className="bg-purple-600 hover:bg-purple-700 w-full"
                     >
                       <Sparkles className="w-3 h-3 mr-1" />
-                      Enhance with AI
+                      Apply Changes
                     </Button>
                   </CardContent>
                 </Card>
@@ -350,7 +367,7 @@ const AICopilot: React.FC<AICopilotProps> = ({
                 {suggestion && (
                   <Card className="bg-gray-700 border-gray-600">
                     <CardContent className="p-3">
-                      <p className="text-sm text-gray-300 mb-2">Suggested enhancement:</p>
+                      <p className="text-sm text-gray-300 mb-2">AI has suggested this:</p>
                       <p className="text-sm text-gray-300 bg-gray-800 p-2 rounded mb-2">{suggestion}</p>
                       <Button
                         size="sm"

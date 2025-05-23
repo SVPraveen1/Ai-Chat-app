@@ -90,6 +90,25 @@ Suggest a natural completion or improvement for their message. Make it sound con
     }
   }
 
+  async generateSuggestionForSelectedText(selectedText: string, instructions: string): Promise<string> {
+    try {
+      const prompt = `I have the following text:
+"${selectedText}"
+
+Based on these instructions or message idea:
+"${instructions}"
+
+Suggest an improved version of the selected text. Return only the modified text without any explanations.`
+
+      const result = await this.model.generateContent(prompt)
+      const response = await result.response
+      return response.text().trim()
+    } catch (error) {
+      console.error('Error generating suggestion for selected text:', error)
+      return ''
+    }
+  }
+
   async analyzeConversation(messages: string[]): Promise<string> {
     try {
       const conversation = messages.slice(-10).join('\n')
@@ -130,6 +149,25 @@ Improve the message while keeping the original intent. Make it more natural and 
     } catch (error) {
       console.error('Error enhancing message:', error)
       throw new Error('Failed to enhance message')
+    }
+  }
+
+  async processTextWithInstructions(text: string, instructions: string): Promise<string> {
+    try {
+      const prompt = `I have the following text:
+"${text}"
+
+Apply these changes to it:
+"${instructions}"
+
+Return only the modified text, without any explanations or additional content.`
+
+      const result = await this.model.generateContent(prompt)
+      const response = await result.response
+      return response.text().trim()
+    } catch (error) {
+      console.error('Error processing text with instructions:', error)
+      throw new Error('Failed to process text with custom instructions')
     }
   }
 }
