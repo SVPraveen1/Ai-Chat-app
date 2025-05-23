@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send, Smile, Bot, User, Menu, Settings } from 'lucide-react'
+import { Send, Smile, Bot, User, Menu, Settings, MessageSquareText } from 'lucide-react' // Added MessageSquareText
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { supabase } from '@/integrations/supabase/client'
@@ -29,6 +29,13 @@ interface Profile {
   full_name: string | null
 }
 
+// New interface for the Ask AI popup state
+interface AskAiPopupState {
+  visible: boolean;
+  text: string;
+  position: { x: number; y: number };
+}
+
 const ChatInterface = () => {
   const { user } = useAuth()
   const { toast } = useToast()
@@ -44,6 +51,11 @@ const ChatInterface = () => {
   const [sidebarExpanded, setSidebarExpanded] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
+
+  // State for the "Ask AI" popup
+  const [askAiPopupState, setAskAiPopupState] = useState<AskAiPopupState>({ visible: false, text: '', position: { x: 0, y: 0 } });
+  // State to hold the text to be sent to AI Copilot chat
+  const [textForCopilotChat, setTextForCopilotChat] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (user) {
@@ -69,6 +81,46 @@ const ChatInterface = () => {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  // Effect to close popup when clicking outside or pressing Escape
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // A bit simplistic, might need a ref on the popup itself if it becomes complex
+      if (askAiPopupState.visible && !(event.target as HTMLElement).closest('.ask-ai-popup-class')) { // Add a class to your popup
+        setAskAiPopupState({ visible: false, text: '', position: { x: 0, y: 0 } });
+      }
+    };
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && askAiPopupState.visible) {
+        setAskAiPopupState({ visible: false, text: '', position: { x: 0, y: 0 } });
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [askAiPopupState.visible]);
+
+  useEffect(() => {
+    // Add a CSS class to the body when text is being selected to give a visual indicator
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      if (selection && selection.toString().trim() !== '') {
+        document.body.classList.add('text-selecting-mode');
+      } else {
+        document.body.classList.remove('text-selecting-mode');
+      }
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange);
+      document.body.classList.remove('text-selecting-mode');
+    };
+  }, []);
 
   const fetchUserProfile = async () => {
     if (!user) return
@@ -176,12 +228,41 @@ const ChatInterface = () => {
     }
   }
 
-  const handleTextSelection = () => {
-    const selection = window.getSelection()
-    if (selection && selection.toString().trim()) {
-      setSelectedText(selection.toString())
+  const handleTextSelection = (event: React.MouseEvent) => { // Accept MouseEvent to get coordinates
+    const selection = window.getSelection();
+    const selectedTextContent = selection?.toString().trim();
+
+    if (selection && selectedTextContent) {
+      // For AI Features (direct use)
+      setSelectedText(selectedTextContent);
+
+      // For "Ask AI" popup
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      
+      // Calculate a better position for the popup:
+      // Center horizontally relative to the selection, but ensure it's visible in viewport
+      const popupWidth = 330; // Approximate width of our popup
+      let xPos = rect.left + (rect.width / 2) - (popupWidth / 2);
+      
+      // Ensure popup doesn't go off-screen to the left or right
+      const viewportWidth = window.innerWidth;
+      xPos = Math.max(10, xPos); // At least 10px from left edge
+      xPos = Math.min(xPos, viewportWidth - popupWidth - 10); // At least 10px from right edge
+      
+      setAskAiPopupState({
+        visible: true,
+        text: selectedTextContent,
+        position: { 
+          x: xPos, 
+          y: rect.bottom + window.scrollY + 5 // Position popup below the selection
+        }, 
+      });
+    } else if (!selectedTextContent && askAiPopupState.visible) {
+      // If selection is cleared, hide the popup unless a click was on the popup itself
+      // The useEffect for click outside will handle clicks not on the popup
     }
-  }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -225,6 +306,16 @@ const ChatInterface = () => {
     setShowUserSearch(false)
     setShowMobileSidebar(false)
   }
+
+  const handleAskAiClick = () => {
+    setTextForCopilotChat(askAiPopupState.text);
+    setAskAiPopupState({ visible: false, text: '', position: { x: 0, y: 0 } });
+    setShowAICopilot(true); // Ensure AI Copilot panel is visible
+  };
+
+  const handleCopilotChatTextProcessed = () => {
+    setTextForCopilotChat(undefined); // Clear the text after AICopilot has handled it
+  };
 
   return (
     <div className="flex h-[calc(100vh-16px)] bg-gray-900 text-white overflow-hidden">
@@ -317,7 +408,7 @@ const ChatInterface = () => {
             </div>
 
             {/* Messages Area */}
-            <ScrollArea className="flex-1 p-4 pb-2" onMouseUp={handleTextSelection}>
+            <ScrollArea className="flex-1 p-4 pb-2" onMouseUp={handleTextSelection}> {/* Pass event to handleTextSelection */}
               <div className="space-y-4 max-w-4xl mx-auto">
                 <AnimatePresence>
                   {messages.map((message) => (
@@ -400,16 +491,61 @@ const ChatInterface = () => {
         )}
       </div>
 
+      {/* "Ask AI" Popup */}
+      {askAiPopupState.visible && (
+        <motion.div
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -5 }}
+          transition={{ duration: 0.2 }}
+          className="ask-ai-popup-class fixed bg-gray-700/95 backdrop-blur-sm border border-purple-400 rounded-lg shadow-xl p-3 z-[100] flex flex-col animate-fadeIn"
+          style={{ 
+            top: askAiPopupState.position.y, 
+            left: askAiPopupState.position.x,
+            maxWidth: '330px',
+            boxShadow: '0 4px 20px rgba(124, 58, 237, 0.25)'
+          }}
+        >
+          <div className="mb-2">
+            <p className="text-xs text-purple-300 font-medium">Selected Text:</p>
+            <p className="text-sm text-gray-200 max-h-16 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-purple-600/40 scrollbar-track-transparent">
+              "{askAiPopupState.text.length > 100 ? askAiPopupState.text.substring(0, 100) + '...' : askAiPopupState.text}"
+            </p>
+          </div>
+          <div className="flex items-center justify-between space-x-2">
+            <Button 
+              size="sm"
+              variant="default"
+              onClick={handleAskAiClick}
+              className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 flex-1"
+            >
+              <MessageSquareText className="w-4 h-4 mr-1.5" />
+              Ask AI Copilot
+            </Button>
+            <Button 
+              size="sm"
+              variant="ghost"
+              onClick={() => setAskAiPopupState({ visible: false, text: '', position: { x: 0, y: 0 } })}
+              className="text-gray-400 hover:text-white h-8 px-2"
+            >
+              Dismiss
+            </Button>
+          </div>
+        </motion.div>
+      )}
+
       {/* AI Copilot Sidebar - Desktop Only */}
       <AnimatePresence>
         {showAICopilot && selectedConversationId && (
           <div className="hidden md:block h-full">
             <AICopilot
-              selectedText={selectedText}
+              selectedText={selectedText} // This remains for the "AI Features" tab direct use
               onInsertText={insertTextAtCursor}
               onReplaceText={replaceMessageText}
               conversationHistory={messages.map(m => m.content)}
               currentInput={newMessage}
+              selectedTextForCopilotChat={textForCopilotChat} // New prop
+              onCopilotChatTextProcessed={handleCopilotChatTextProcessed} // New prop
             />
           </div>
         )}

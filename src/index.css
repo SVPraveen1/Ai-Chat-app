@@ -2,6 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@layer components {
+  .animate-fadeIn {
+    animation: fadeIn 0.2s ease-in forwards;
+  }
+  
+  /* Text selection highlighting enhancement */
+  .text-selecting-mode ::selection {
+    background-color: rgba(139, 92, 246, 0.6); /* Purple with transparency */
+    color: white;
+  }
+  
+  /* Subtle indicator when text is being selected */
+  .text-selecting-mode {
+    cursor: pointer;
+  }
+  
+  .text-selecting-mode .ask-ai-popup-class {
+    cursor: default;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

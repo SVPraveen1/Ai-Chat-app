@@ -77,8 +77,6 @@ interface AICopilotProps {
   onReplaceText: (text: string) => void
   conversationHistory: string[]
   currentInput: string
-  selectedTextForCopilotChat?: string // New prop
-  onCopilotChatTextProcessed?: () => void // New prop
 }
 
 const AICopilot: React.FC<AICopilotProps> = ({
@@ -86,12 +84,10 @@ const AICopilot: React.FC<AICopilotProps> = ({
   onInsertText,
   onReplaceText,
   conversationHistory,
-  currentInput,
-  selectedTextForCopilotChat, // Destructure new prop
-  onCopilotChatTextProcessed // Destructure new prop
+  currentInput
 }) => {
   const [isExpanded, setIsExpanded] = useState(true)
-  const [mainTab, setMainTab] = useState<string>('features')
+  const [mainTab, setMainTab] = useState<'features' | 'copilot'>('features')
   const [activeSection, setActiveSection] = useState<'actions' | 'suggestions' | 'analysis'>('actions')
   const [isProcessing, setIsProcessing] = useState(false)
   const [suggestion, setSuggestion] = useState('')
@@ -107,7 +103,6 @@ const AICopilot: React.FC<AICopilotProps> = ({
   const { toast } = useToast()
   const suggestionTimeoutRef = useRef<NodeJS.Timeout>()
   const chatEndRef = useRef<HTMLDivElement>(null)
-  const chatInputRef = useRef<HTMLTextAreaElement>(null) // New ref for chat input
 
   useEffect(() => {
     if (currentInput.length > 15) {
@@ -137,21 +132,6 @@ const AICopilot: React.FC<AICopilotProps> = ({
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
   }, [chatMessages, mainTab])
-
-  // Effect to handle external request to populate AI Copilot chat input
-  useEffect(() => {
-    if (selectedTextForCopilotChat && selectedTextForCopilotChat.trim() !== '') {
-      setMainTab('copilot');
-      setChatInput(selectedTextForCopilotChat);
-      setIsExpanded(true); // Ensure the panel is open
-      if (chatInputRef.current) {
-        chatInputRef.current.focus();
-      }
-      if (onCopilotChatTextProcessed) {
-        onCopilotChatTextProcessed(); // Signal that it's been handled
-      }
-    }
-  }, [selectedTextForCopilotChat, onCopilotChatTextProcessed]);
 
   // We don't need to automatically generate summary when text is selected anymore
   // Summary will be generated only when the user clicks the Summarize action
@@ -201,15 +181,8 @@ const AICopilot: React.FC<AICopilotProps> = ({
         .map(msg => `${msg.role}: ${msg.content}`)
         .join('\n')
       
-      // Get response from AI with improved error handling
-      let aiResponse: string;
-      
-      try {
-        aiResponse = await geminiService.getChatResponse(userMessage, contextMessages);
-      } catch (aiError) {
-        console.error('Error from Gemini service:', aiError);
-        aiResponse = "I'm having trouble connecting to my knowledge base. Could you try again in a moment?";
-      }
+      // Get response from AI
+      const aiResponse = await geminiService.getChatResponse(userMessage, contextMessages)
       
       // Add AI response to chat
       setChatMessages(prev => [...prev, { role: 'assistant' as const, content: aiResponse }])
@@ -220,20 +193,18 @@ const AICopilot: React.FC<AICopilotProps> = ({
       }, 100)
       
     } catch (error) {
-      console.error('Error in chat submission process:', error)
+      console.error('Error getting AI response:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to get a response from AI',
+        variant: 'destructive'
+      })
       
-      // Add error message to chat - this will execute even if the Gemini service throws an error
+      // Add error message to chat
       setChatMessages(prev => [...prev, { 
         role: 'assistant' as const, 
         content: 'Sorry, I had trouble processing that request. Could you try asking in a different way?' 
       }])
-      
-      // Only show toast for critical errors
-      toast({
-        title: 'Connection Issue',
-        description: 'Failed to communicate with the AI service',
-        variant: 'destructive'
-      })
     } finally {
       setIsProcessing(false)
     }
@@ -298,38 +269,26 @@ const AICopilot: React.FC<AICopilotProps> = ({
         ? (selectedText && selectedText.length > 50 ? selectedText : conversationHistory.slice(-5).join('\n'))
         : selectedText
 
-      // Call the Gemini service with proper error handling
       const result = await geminiService.processText(
         textToProcess,
         actionId,
         conversationHistory.slice(-3).join('\n')
       )
 
-      // Check if we got a valid result back
-      if (result && !result.includes("Sorry, I couldn't process")) {
-        if (actionId === 'summary') {
-          onInsertText(`\n\n**Summary:** ${result}`)
-        } else {
-          onReplaceText(result)
-        }
-
-        toast({
-          title: 'AI Action Complete',
-          description: `Successfully ${actionId === 'summary' ? 'generated summary' : 'processed text'}`,
-        })
+      if (actionId === 'summary') {
+        onInsertText(`\n\n**Summary:** ${result}`)
       } else {
-        // Show a friendly error message if the result indicates an error
-        toast({
-          title: 'AI Processing Issue',
-          description: result || 'There was a problem with the AI service. Please try again later.',
-          variant: 'destructive'
-        })
+        onReplaceText(result)
       }
+
+      toast({
+        title: 'AI Action Complete',
+        description: `Successfully ${actionId === 'summary' ? 'generated summary' : 'processed text'}`,
+      })
     } catch (error) {
-      console.error(`Error in handleAIAction (${actionId}):`, error);
       toast({
         title: 'Error',
-        description: 'Failed to process text with AI. Please try again later.',
+        description: 'Failed to process text with AI',
         variant: 'destructive'
       })
     } finally {
@@ -353,28 +312,16 @@ const AICopilot: React.FC<AICopilotProps> = ({
     try {
       // Pass the selectedText and smartInput as instructions to process the text
       const result = await geminiService.processTextWithInstructions(selectedText, smartInput)
-      
-      // Check if we got a valid result
-      if (result && !result.includes("Sorry, I couldn't process")) {
-        onReplaceText(result)
-        setSmartInput('')
-        toast({
-          title: 'Changes applied',
-          description: 'Your selected text has been modified according to your instructions',
-        })
-      } else {
-        // Show the error message from the service
-        toast({
-          title: 'Processing Error',
-          description: result || 'Unable to process your instructions. Please try different wording.',
-          variant: 'destructive'
-        })
-      }
+      onReplaceText(result)
+      setSmartInput('')
+      toast({
+        title: 'Changes applied',
+        description: 'Your selected text has been modified according to your instructions',
+      })
     } catch (error) {
-      console.error('Error in handleSmartInputSubmit:', error);
       toast({
         title: 'Error',
-        description: 'Failed to apply changes to the selected text. The AI service may be unavailable.',
+        description: 'Failed to apply changes to the selected text',
         variant: 'destructive'
       })
     } finally {
@@ -462,10 +409,8 @@ const AICopilot: React.FC<AICopilotProps> = ({
           <ScrollArea className="flex-1 px-4 pb-4 overflow-hidden">
             <div className="pt-2"> {/* Added padding top for consistent spacing */}
             </div>
-            
-            {/* Content based on selected tab */}
+            {/* Chat interface when copilot tab is selected */}
             {mainTab === 'copilot' ? (
-              /* AI Copilot Chat Tab */
               <div className="flex flex-col h-full space-y-4">
                 {/* Empty state for no messages */}
                 {chatMessages.length === 0 ? (
@@ -512,33 +457,8 @@ const AICopilot: React.FC<AICopilotProps> = ({
                     <div ref={chatEndRef} />
                   </div>
                 )}
-                
-                {/* Chat input for AI Copilot tab */}
-                <div className="flex items-center gap-2 mt-2 sticky bottom-0 bg-gray-800 p-2 rounded-lg">
-                  <Textarea
-                    ref={chatInputRef} // Assign the ref here
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    placeholder="Ask AI Copilot..."
-                    className="bg-gray-700 border-gray-600 text-white text-sm min-h-[40px] resize-none"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault()
-                        handleChatSubmit()
-                      }
-                    }}
-                  />
-                  <Button
-                    onClick={handleChatSubmit}
-                    disabled={isProcessing || !chatInput.trim()}
-                    className="bg-purple-600 hover:bg-purple-700 h-10 w-10 p-0"
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
               </div>
             ) : (
-              /* AI Features Tab */
               <>
                 {/* Selected Text Display - Only shown in Features tab */}
                 {selectedText && (
@@ -556,7 +476,7 @@ const AICopilot: React.FC<AICopilotProps> = ({
                     </CardContent>
                   </Card>
                 )}
-                
+            
                 {/* AI Actions - Only shown in Features tab */}
                 {activeSection === 'actions' && (
               <div className="space-y-3">
@@ -748,49 +668,62 @@ const AICopilot: React.FC<AICopilotProps> = ({
                 </div>
               </div>
             )}
-            
-            {/* Reconnect button - shown when repeated failures occur */}
-            {mainTab === 'copilot' && chatMessages.length > 0 && 
-             chatMessages.slice(-2).filter(msg => msg.role === 'assistant').every(msg => 
-               msg.content.includes("Sorry") || msg.content.includes("trouble") || msg.content.includes("try again")
-             ) && (
-              <div className="mt-4 p-3 bg-gray-700 border border-gray-600 rounded-lg">
-                <div className="flex flex-col space-y-2">
-                  <p className="text-sm text-gray-300">Having trouble connecting to AI service?</p>
-                  <Button
-                    size="sm"
-                    onClick={async () => {
-                      setIsProcessing(true);
-                      const success = await geminiService.reconnect();
-                      setIsProcessing(false);
-                      
-                      if (success) {
-                        setChatMessages(prev => [...prev, { 
-                          role: 'assistant' as const, 
-                          content: 'Connection restored! How can I help you?' 
-                        }]);
-                      } else {
-                        toast({
-                          title: 'Connection Failed',
-                          description: 'Could not establish connection to AI service',
-                          variant: 'destructive'
-                        });
-                      }
-                    }}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    Retry Connection
-                  </Button>
+
+            {/* Chat Interface - New Feature */}
+            <div className="mt-4">
+              <div className="bg-gray-800 p-3 rounded-lg shadow-md">
+                <div className="flex flex-col space-y-3">
+                  <div className="text-sm text-gray-400">
+                    <p className="font-medium text-gray-300">AI Copilot Chat</p>
+                    <p>Ask questions or get assistance with your text.</p>
+                  </div>
+                  
+                  {/* Chat Messages */}
+                  <div className="max-h-[200px] overflow-y-auto pr-3 scrollbar-thin scrollbar-thumb-purple-600/40 scrollbar-track-transparent">
+                    {chatMessages.map((msg, idx) => (
+                      <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-2`}>
+                        <div className={`max-w-xs rounded-lg px-4 py-2 text-sm ${msg.role === 'user' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300'}`}>
+                          {msg.content}
+                        </div>
+                      </div>
+                    ))}
+                    {/* chatEndRef should be inside the scrollable div if it's meant to scroll to the last message */}
+                    <div ref={chatEndRef} /> 
+                  </div> {/* This div was missing its closing tag for chat messages */}
+
+                  {/* Chat Input Area */}
+                  <div className="flex">
+                    <Textarea
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder="Type your message..."
+                      className="bg-gray-700 border-gray-600 text-white text-sm resize-none pr-10"
+                      // Add onKeyPress for Enter to submit, if desired
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleChatSubmit();
+                        }
+                      }}
+                    />
+                    <Button
+                      onClick={handleChatSubmit}
+                      disabled={isProcessing || !chatInput.trim()} // Disable if no input
+                      className="bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg ml-2"
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            )}
-              </>
-            )}
+            </div>
+            </> // This closes the fragment for mainTab !== 'copilot'
+            )} 
           </ScrollArea>
         </CollapsibleContent>
       </Collapsible>
     </motion.div>
-  )
+  );
 }
 
-export default AICopilot
+export default AICopilot;
