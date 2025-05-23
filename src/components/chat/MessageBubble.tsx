@@ -64,16 +64,16 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwn }) => {
     >
       <div className={`max-w-xs lg:max-w-md relative ${isOwn ? 'order-2' : 'order-1'}`}>
         {!isOwn && (
-          <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center mb-1">
-            <span className="text-xs font-semibold">U</span>
+          <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-700 rounded-full flex items-center justify-center mb-1">
+            <span className="text-xs font-semibold text-white">U</span>
           </div>
         )}
         
         <div
           className={`px-4 py-2 rounded-lg ${
             isOwn
-              ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-              : 'bg-gray-700 text-white'
+              ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white'
+              : 'bg-slate-700 text-white'
           } shadow-lg`}
         >
           {isEditing ? (
@@ -81,11 +81,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwn }) => {
               <Input
                 value={editText}
                 onChange={(e) => setEditText(e.target.value)}
-                className="bg-gray-800 border-gray-600 text-white"
+                className="bg-slate-800 border-slate-600 text-white"
                 onKeyPress={(e) => e.key === 'Enter' && handleEdit()}
               />
               <div className="flex space-x-2">
-                <Button size="sm" onClick={handleEdit} className="bg-green-600 hover:bg-green-700">
+                <Button size="sm" onClick={handleEdit} className="bg-blue-600 hover:bg-blue-700">
                   <Check className="w-3 h-3" />
                 </Button>
                 <Button
@@ -95,7 +95,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwn }) => {
                     setIsEditing(false)
                     setEditText(message.content)
                   }}
-                  className="border-gray-600 text-gray-300"
+                  className="border-slate-600 text-slate-300"
                 >
                   <X className="w-3 h-3" />
                 </Button>
@@ -103,7 +103,14 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwn }) => {
             </div>
           ) : (
             <>
-              <p className="text-sm leading-relaxed break-words">{message.content}</p>
+              <div 
+                className="text-sm leading-relaxed break-words"
+                dangerouslySetInnerHTML={{ 
+                  __html: message.content.replace(/•\s*(.*?)(?=(\n•|\n\n|$))/gs, 
+                    '<div class="flex mb-2"><span class="mr-1.5 text-purple-300 flex-shrink-0">•</span><span>$1</span></div>'
+                  ) 
+                }} 
+              />
               {message.is_edited && (
                 <p className="text-xs text-gray-300 mt-1 opacity-70">edited</p>
               )}

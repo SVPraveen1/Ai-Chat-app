@@ -388,30 +388,30 @@ const AICopilot: React.FC<AICopilotProps> = ({
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 400, opacity: 0 }}
       transition={{ duration: 0.3 }}
-      className="w-80 bg-gray-800 border-l border-gray-700 flex flex-col h-full overflow-hidden"
+      className="w-80 bg-slate-800 border-l border-slate-700 flex flex-col h-full overflow-hidden"
     >
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
-          <div className="p-4 border-b border-gray-700 cursor-pointer hover:bg-gray-700/50 transition-colors">
+          <div className="p-4 border-b border-slate-700 cursor-pointer hover:bg-slate-700/50 transition-colors">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center shadow-lg">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center shadow-lg">
                   <Bot className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <h3 className="font-bold text-lg text-white">AI Copilot</h3>
-                  <p className="text-xs text-gray-400">Intelligent assistance</p>
+                  <p className="text-xs text-slate-400">Intelligent assistance</p>
                 </div>
-                <Sparkles className="w-5 h-5 text-purple-400 ml-1" />
+                <Sparkles className="w-5 h-5 text-cyan-400 ml-1" />
               </div>
-              {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+              {isExpanded ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
             </div>
           </div>
         </CollapsibleTrigger>
 
         <CollapsibleContent className="overflow-hidden flex flex-col">
           {/* Main Tabs */}
-          <div className="flex bg-gray-700 p-1 mx-4 mt-3 mb-2 rounded-lg shadow-md">
+          <div className="flex bg-slate-700 p-1 mx-4 mt-3 mb-2 rounded-lg shadow-md">
             {[
               { id: 'features', label: 'AI Features', icon: Cpu },
               { id: 'copilot', label: 'AI Copilot', icon: Brain }
@@ -423,8 +423,8 @@ const AICopilot: React.FC<AICopilotProps> = ({
                 onClick={() => setMainTab(tab.id as any)}
                 className={`flex-1 text-sm px-3 py-2 ${
                   mainTab === tab.id 
-                    ? 'bg-purple-600 text-white shadow-lg' 
-                    : 'text-gray-300 hover:text-white hover:bg-gray-600/50'
+                    ? 'bg-blue-600 text-white shadow-lg' 
+                    : 'text-slate-300 hover:text-white hover:bg-slate-600/50'
                 }`}
               >
                 <tab.icon className="w-4 h-4 mr-1.5" />
@@ -435,7 +435,7 @@ const AICopilot: React.FC<AICopilotProps> = ({
           
           {/* Feature Tabs - Only visible when in Features tab */}
           {mainTab === 'features' && (
-            <div className="flex bg-gray-700/50 p-1 mx-4 mb-2 rounded-lg">
+            <div className="flex bg-slate-700/50 p-1 mx-4 mb-2 rounded-lg">
               {[
                 { id: 'actions', label: 'Actions', icon: Wand2 },
                 { id: 'suggestions', label: 'Smart', icon: Lightbulb },
@@ -448,8 +448,8 @@ const AICopilot: React.FC<AICopilotProps> = ({
                   onClick={() => setActiveSection(tab.id as any)}
                   className={`flex-1 text-sm px-2 py-1 ${
                     activeSection === tab.id 
-                      ? 'bg-purple-500/70 text-white' 
-                      : 'text-gray-300 hover:text-white hover:bg-gray-600/50'
+                      ? 'bg-blue-500/70 text-white' 
+                      : 'text-slate-300 hover:text-white hover:bg-slate-600/50'
                   }`}
                 >
                   <tab.icon className="w-3 h-3 mr-1" />
@@ -492,7 +492,7 @@ const AICopilot: React.FC<AICopilotProps> = ({
                               : 'bg-gray-700 border border-gray-600 text-gray-200'
                           }`}
                         >
-                          <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                          <div className="text-sm whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: msg.content.replace(/•\s*(.*?)(?=(\n•|\n\n|$))/gs, '<div class="flex mb-1"><span class="mr-1.5 text-purple-300">•</span><span>$1</span></div>') }} />
                           {msg.role === 'assistant' && (
                             <div className="mt-2 text-right">
                               <Button
@@ -542,14 +542,14 @@ const AICopilot: React.FC<AICopilotProps> = ({
               <>
                 {/* Selected Text Display - Only shown in Features tab */}
                 {selectedText && (
-                  <Card className="mb-4 bg-gray-700 border-gray-600 shadow-md">
+                  <Card className="mb-4 bg-slate-700 border-slate-600 shadow-md">
                     <CardContent className="p-3">
-                      <p className="text-sm font-medium text-purple-300 mb-2 flex items-center">
-                        <span className="w-1.5 h-4 bg-purple-500 rounded-full mr-2"></span>
+                      <p className="text-sm font-medium text-blue-300 mb-2 flex items-center">
+                        <span className="w-1.5 h-4 bg-blue-500 rounded-full mr-2"></span>
                         Selected text:
                       </p>
                       <div className="overflow-hidden rounded">
-                        <p className="text-sm text-gray-300 bg-gray-800 p-3 border-l-2 border-purple-500 max-h-36 overflow-y-auto scrollbar-thin scrollbar-thumb-purple-600/40 scrollbar-track-transparent break-words">
+                        <p className="text-sm text-slate-300 bg-slate-800 p-3 border-l-2 border-blue-500 max-h-36 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-600/40 scrollbar-track-transparent break-words">
                           "{selectedText}"
                         </p>
                       </div>
@@ -560,11 +560,11 @@ const AICopilot: React.FC<AICopilotProps> = ({
                 {/* AI Actions - Only shown in Features tab */}
                 {activeSection === 'actions' && (
               <div className="space-y-3">
-                <h4 className="text-base font-medium text-gray-300 mb-2 flex items-center">
-                  <Wand2 className="w-5 h-5 mr-2 text-purple-400" />
+                <h4 className="text-base font-medium text-slate-300 mb-2 flex items-center">
+                  <Wand2 className="w-5 h-5 mr-2 text-blue-400" />
                   Available AI Actions
                 </h4>
-                <div className="max-h-[calc(100vh-240px)] overflow-y-auto pr-1 space-y-2.5 scrollbar-thin scrollbar-thumb-purple-600/40 scrollbar-track-gray-800 pb-2">
+                <div className="max-h-[calc(100vh-240px)] overflow-y-auto pr-1 space-y-2.5 scrollbar-thin scrollbar-thumb-blue-600/40 scrollbar-track-slate-800 pb-2">
                   {AI_ACTIONS.map((action) => 
                     action.id === 'translate' ? (
                       <div key={action.id} className="space-y-2">
@@ -573,25 +573,25 @@ const AICopilot: React.FC<AICopilotProps> = ({
                           size="sm"
                           onClick={() => setShowTranslateInput(!showTranslateInput)}
                           disabled={isProcessing}
-                          className="h-auto p-3 bg-gray-700/50 border border-gray-600 hover:border-purple-500 text-gray-300 hover:bg-gray-700 hover:text-white text-left flex items-center w-full transition-all duration-200 rounded-lg hover:translate-x-1"
+                          className="h-auto p-3 bg-slate-700/50 border border-slate-600 hover:border-blue-500 text-slate-300 hover:bg-slate-700 hover:text-white text-left flex items-center w-full transition-all duration-200 rounded-lg hover:translate-x-1"
                         >
-                          <span className="mr-3 text-xl flex-shrink-0 w-9 h-9 flex items-center justify-center bg-gray-800 rounded-full">{action.icon}</span>
+                          <span className="mr-3 text-xl flex-shrink-0 w-9 h-9 flex items-center justify-center bg-slate-800 rounded-full">{action.icon}</span>
                           <div className="flex flex-col overflow-hidden">
                             <span className="font-medium text-base text-white truncate">{action.label}</span>
-                            <span className="text-sm text-gray-400 leading-tight truncate">{action.description}</span>
+                            <span className="text-sm text-slate-400 leading-tight truncate">{action.description}</span>
                           </div>
                         </Button>
                         
                         {showTranslateInput && (
-                          <Card className="bg-gray-800 border-gray-700 p-2">
+                          <Card className="bg-slate-800 border-slate-700 p-2">
                             <CardContent className="p-2 space-y-3">
                               <div className="flex flex-col space-y-2">
-                                <label className="text-sm font-medium text-gray-300">Translate to:</label>
+                                <label className="text-sm font-medium text-slate-300">Translate to:</label>
                                 <Input
                                   value={targetLanguage}
                                   onChange={(e) => setTargetLanguage(e.target.value)}
                                   placeholder="Enter language name"
-                                  className="bg-gray-700 border-gray-600 text-white"
+                                  className="bg-slate-700 border-slate-600 text-white"
                                 />
                               </div>
                               <div className="grid grid-cols-2 gap-1 mt-1">
@@ -633,7 +633,7 @@ const AICopilot: React.FC<AICopilotProps> = ({
                                     }
                                   }}
                                   disabled={isProcessing || !targetLanguage.trim()}
-                                  className="bg-purple-600 hover:bg-purple-700"
+                                  className="bg-blue-600 hover:bg-blue-700"
                                 >
                                   Translate
                                 </Button>
@@ -649,12 +649,12 @@ const AICopilot: React.FC<AICopilotProps> = ({
                         size="sm"
                         onClick={() => handleAIAction(action.id)}
                         disabled={isProcessing}
-                        className="h-auto p-3 bg-gray-700/50 border border-gray-600 hover:border-purple-500 text-gray-300 hover:bg-gray-700 hover:text-white text-left flex items-center w-full transition-all duration-200 rounded-lg hover:translate-x-1"
+                        className="h-auto p-3 bg-slate-700/50 border border-slate-600 hover:border-blue-500 text-slate-300 hover:bg-slate-700 hover:text-white text-left flex items-center w-full transition-all duration-200 rounded-lg hover:translate-x-1"
                       >
-                        <span className="mr-3 text-xl flex-shrink-0 w-9 h-9 flex items-center justify-center bg-gray-800 rounded-full">{action.icon}</span>
+                        <span className="mr-3 text-xl flex-shrink-0 w-9 h-9 flex items-center justify-center bg-slate-800 rounded-full">{action.icon}</span>
                         <div className="flex flex-col overflow-hidden">
                           <span className="font-medium text-base text-white truncate">{action.label}</span>
-                          <span className="text-sm text-gray-400 leading-tight truncate">{action.description}</span>
+                          <span className="text-sm text-slate-400 leading-tight truncate">{action.description}</span>
                         </div>
                       </Button>
                     )
@@ -727,7 +727,13 @@ const AICopilot: React.FC<AICopilotProps> = ({
                         <div className="w-full overflow-hidden">
                           <p className="text-sm font-medium text-blue-300 mb-1">Analysis</p>
                           <div className="max-h-[400px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-purple-600/40 scrollbar-track-transparent">
-                            <p className="text-sm text-gray-300 leading-relaxed break-words">{analysis}</p>
+                            <div className="text-sm text-gray-300 leading-relaxed break-words" 
+                              dangerouslySetInnerHTML={{ 
+                                __html: analysis.replace(/•\s*(.*?)(?=(\n•|\n\n|$))/gs, 
+                                  '<div class="flex mb-2"><span class="mr-1.5 text-purple-300 flex-shrink-0">•</span><span>$1</span></div>'
+                                ) 
+                              }} 
+                            />
                           </div>
                         </div>
                       </div>

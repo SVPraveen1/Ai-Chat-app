@@ -318,7 +318,7 @@ const ChatInterface = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-16px)] bg-gray-900 text-white overflow-hidden">
+    <div className="flex h-[calc(100vh-16px)] bg-slate-900 text-white overflow-hidden">
       {/* Mobile Sidebar Overlay */}
       {showMobileSidebar && (
         <div 
@@ -333,15 +333,15 @@ const ChatInterface = () => {
         lg:translate-x-0 fixed lg:relative z-50 lg:z-auto
         transition-transform duration-300 ease-in-out
         ${sidebarExpanded ? 'w-80' : 'w-16'}
-        bg-gray-800 border-r border-gray-700 flex flex-col h-full
+        bg-slate-800 border-r border-slate-700 flex flex-col h-full
       `}>
         {/* Sidebar Header */}
         <Collapsible open={sidebarExpanded} onOpenChange={setSidebarExpanded}>
           <CollapsibleTrigger asChild>
-            <div className="p-4 border-b border-gray-700 cursor-pointer hover:bg-gray-700/50">
+            <div className="p-4 border-b border-slate-700 cursor-pointer hover:bg-slate-700/50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center">
                     <User className="w-4 h-4 text-white" />
                   </div>
                   {sidebarExpanded && <h2 className="font-semibold">Copilot Chat</h2>}
@@ -424,7 +424,7 @@ const ChatInterface = () => {
             </ScrollArea>
 
             {/* Message Input */}
-            <div className="bg-gray-800 p-4 border-t border-gray-700">
+            <div className="bg-slate-800 p-4 border-t border-slate-700">
               <div className="max-w-4xl mx-auto">
                 <div className="flex items-end space-x-2">
                   <div className="flex-1 relative">
@@ -439,7 +439,7 @@ const ChatInterface = () => {
                       }}
                       onKeyPress={handleKeyPress}
                       placeholder="Type a message..."
-                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-3 pr-12 resize-none max-h-28 min-h-[48px] focus:outline-none focus:ring-2 focus:ring-purple-500 scrollbar-thin scrollbar-thumb-purple-600/40 scrollbar-track-transparent"
+                      className="w-full bg-slate-700 text-white rounded-lg px-4 py-3 pr-12 resize-none max-h-28 min-h-[48px] focus:outline-none focus:ring-2 focus:ring-blue-500 scrollbar-thin scrollbar-thumb-blue-600/40 scrollbar-track-transparent"
                       rows={1}
                     />
                     <div className="absolute right-2 top-2 flex space-x-1">
@@ -447,7 +447,7 @@ const ChatInterface = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => setShowEmojiSelector(!showEmojiSelector)}
-                        className="text-gray-400 hover:text-yellow-400 p-1"
+                        className="text-slate-400 hover:text-yellow-400 p-1"
                       >
                         <Smile className="w-4 h-4" />
                       </Button>
@@ -461,7 +461,7 @@ const ChatInterface = () => {
                   <Button
                     onClick={sendMessage}
                     disabled={!newMessage.trim()}
-                    className="bg-purple-600 hover:bg-purple-700 text-white rounded-lg p-3"
+                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-3"
                   >
                     <Send className="w-4 h-4" />
                   </Button>

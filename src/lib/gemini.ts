@@ -99,6 +99,9 @@ class GeminiService {
       return this.backupText;
     }
     
+    // Determine if this action should use bullet points
+    const useBulletPoints = action === 'summary' || action === 'expand' || action === 'analysis';
+    
     if (!text || text.trim() === '') {
       return 'Please provide some text to process.';
     }
@@ -143,7 +146,11 @@ class GeminiService {
         const result = await this.model.generateContent(prompt)
         const response = await result.response
         const processedText = response.text().trim()
-        return processedText || this.backupText;
+        
+        // Format with bullet points if appropriate for this action type
+        return useBulletPoints 
+          ? this.formatTextWithBulletPoints(processedText || this.backupText, true)
+          : (processedText || this.backupText);
       } catch (apiError) {
         console.error('Gemini API Error:', apiError);
         return `Sorry, I couldn't process the ${action} action. Please try again later.`;
@@ -210,35 +217,123 @@ Suggest an improved version of the selected text. Return only the modified text 
     }
   }
 
-  async analyzeConversation(messages: string[]): Promise<string> {
-    if (!this.isInitialized || !messages || messages.length === 0) {
-      return 'Unable to analyze conversation at the moment.';
+  async getChatResponse(userMessage: string, chatContext: string): Promise<string> {
+    if (!this.isInitialized) {
+      console.warn('Gemini service not initialized, returning fallback response');
+      return this.backupText;
+    }
+    
+    if (!userMessage || userMessage.trim() === '') {
+      return 'I didn\'t receive a message. How can I help you?';
     }
     
     try {
-      const conversation = messages.slice(-10).join('\n')
-      const prompt = `Analyze this conversation and provide helpful insights:
-${conversation}
+      // Simplified prompt: AI should ONLY return the direct answer/content.
+      const prompt = `You are an AI assistant. A user has sent the following message:
+"${userMessage}"
 
-Provide a brief analysis focusing on:
-1. Main topics discussed
-2. Overall tone and sentiment
-3. Communication style
-4. Any helpful suggestions for better engagement
+Previous conversation context:
+${chatContext}
 
-Keep the analysis under 150 words and make it actionable.`
+Respond with ONLY the direct answer or requested content. Do NOT include any extra text, greetings, explanations, or conversational phrases like "Sure, I can help with that," or "Here is the information:". Just provide the core information or response.
+If the query is informational (e.g., "what is X", "explain Y"), provide the answer as short, concise bullet points (using •). Each point should be brief.
+Otherwise, provide the direct response.`;
 
       try {
         const result = await this.model.generateContent(prompt)
         const response = await result.response
-        return response.text().trim()
+        let chatResponse = response.text().trim()
+        
+        // Fallback if response is empty
+        if (!chatResponse) {
+          chatResponse = "I'm here to help! Could you rephrase your question?";
+        }
+        
+        // The prompt now guides Gemini for bullet points, so direct formatting might not be needed
+        // or can be simplified. For now, let's trust the prompt.
+        // Consider if formatTextWithBulletPoints is still needed or if the prompt is sufficient.
+        // Forcing bullet points if the original query seemed informational, as per new prompt.
+        const lowercaseMessage = userMessage.toLowerCase();
+        const isInformationalQuery = 
+          lowercaseMessage.includes('what') || 
+          lowercaseMessage.includes('how') || 
+          lowercaseMessage.includes('why') || 
+          lowercaseMessage.includes('explain') || 
+          lowercaseMessage.includes('describe') ||
+          lowercaseMessage.includes('meaning') || 
+          lowercaseMessage.includes('definition');
+
+        if (isInformationalQuery && !chatResponse.includes('•')) {
+            // If it's informational and no bullets, try a simple split by sentence or new line.
+            // This is a basic attempt if Gemini doesn't follow bullet instruction.
+            const lines = chatResponse.split(/[.\n]/).filter(line => line.trim() !== '');
+            if (lines.length > 1) {
+                chatResponse = lines.map(line => `• ${line.trim()}`).join('\n');
+            } else if (lines.length === 1) {
+                chatResponse = `• ${lines[0].trim()}`;
+            }
+        }
+        
+        return chatResponse;
       } catch (apiError) {
         console.error('Gemini API Error:', apiError);
-        return 'Unable to analyze conversation at the moment.';
+        return "Sorry, I'm having trouble connecting to my knowledge base right now. Please try again in a moment.";
       }
     } catch (error) {
-      console.error('Error analyzing conversation:', error)
-      return 'Unable to analyze conversation at the moment.'
+      console.error('Error getting chat response:', error)
+      return "I apologize, but I'm experiencing technical difficulties right now. Please try again later.";
+    }
+  }
+
+  async analyzeConversation(messages: string[]): Promise<string> {
+    if (!this.isInitialized || !messages || messages.length === 0) {
+      return '• Unable to analyze conversation at the moment.';
+    }
+    
+    try {
+      const conversation = messages.slice(-10).join('\n');
+      // Updated prompt for very short, precise, concise bullet points without explanation.
+      const prompt = `Analyze this conversation:
+${conversation}
+
+Provide insights as EXTREMELY short and precise bullet points (using •). Each point should be a few words.
+DO NOT explain anything. Just list the concise points. Focus on:
+• Key topics (1-3 words)
+• Overall sentiment (1-2 words)
+• Dominant communication style (1-2 words)
+• Actionable suggestions (if any, make it brief)
+
+Example:
+• Topic: Project Deadline
+• Sentiment: Urgent
+• Style: Formal
+• Suggestion: Clarify roles`;
+
+      try {
+        const result = await this.model.generateContent(prompt);
+        const response = await result.response;
+        let analysisText = response.text().trim();
+        
+        // Ensure it's formatted with bullet points if not already
+        if (!analysisText.includes('•') && analysisText) {
+            const points = analysisText.split('\n').filter(pt => pt.trim() !== '');
+            if (points.length > 0) {
+                analysisText = points.map(pt => `• ${pt.trim()}`).join('\n');
+            } else {
+                analysisText = "• No specific insights generated.";
+            }
+        } else if (!analysisText) {
+             analysisText = "• Unable to generate insights at this time.";
+        }
+        
+        return analysisText;
+      } catch (apiError) {
+        console.error('Gemini API Error:', apiError);
+        return '• Unable to analyze: API error.';
+      }
+    } catch (error) {
+      console.error('Error analyzing conversation:', error);
+      return '• Unable to analyze: System error.';
     }
   }
 
@@ -332,8 +427,17 @@ Return only the modified text, without any explanations or additional content.`
       try {
         const result = await this.model.generateContent(prompt)
         const response = await result.response
-        const processedText = response.text().trim()
-        return processedText || "I couldn't apply your instructions. Please try with different wording.";
+        const processedText = response.text().trim() || "I couldn't apply your instructions. Please try with different wording.";
+        
+        // Check if instructions mention bullet points, list, or points
+        const wantsBulletPoints = 
+          instructions.toLowerCase().includes('bullet') || 
+          instructions.toLowerCase().includes('list') || 
+          instructions.toLowerCase().includes('points');
+          
+        return wantsBulletPoints 
+          ? this.formatTextWithBulletPoints(processedText, true)
+          : processedText;
       } catch (apiError) {
         console.error('Gemini API Error:', apiError);
         return "Sorry, I couldn't process your instructions. The AI service may be temporarily unavailable.";
@@ -344,38 +448,22 @@ Return only the modified text, without any explanations or additional content.`
     }
   }
   
-  async getChatResponse(userMessage: string, chatContext: string): Promise<string> {
-    if (!this.isInitialized) {
-      console.warn('Gemini service not initialized, returning fallback response');
-      return this.backupText;
+  // Helper function to format text with bullet points if needed
+  private formatTextWithBulletPoints(text: string, forceFormat: boolean = false): string {
+    // Check if text already contains bullet points
+    const hasBulletPoints = text.includes('•') || text.includes('- ') || text.includes('* ');
+    
+    if (hasBulletPoints || !forceFormat) {
+      return text;
+    }
+
+    // If text should be bullet points but isn't, convert paragraphs to bullets
+    const paragraphs = text.split('\n\n').filter(p => p.trim() !== '');
+    if (paragraphs.length > 1) {
+      return paragraphs.map(p => `• ${p.trim()}`).join('\n\n');
     }
     
-    if (!userMessage || userMessage.trim() === '') {
-      return 'I didn\'t receive a message. How can I help you?';
-    }
-    
-    try {
-      const prompt = `You are an AI assistant named AI Copilot for a chat application. Be helpful, friendly, and concise.
-User's question or message is: "${userMessage}"
-
-Previous conversation context:
-${chatContext}
-
-Provide a helpful response to assist the user. If they ask about the chat application, you should know about common chat features like messaging, conversations, and various AI features in the app.`
-
-      try {
-        const result = await this.model.generateContent(prompt)
-        const response = await result.response
-        const chatResponse = response.text().trim()
-        return chatResponse || "I'm here to help! Could you rephrase your question?";
-      } catch (apiError) {
-        console.error('Gemini API Error:', apiError);
-        return "Sorry, I'm having trouble connecting to my knowledge base right now. Please try again in a moment.";
-      }
-    } catch (error) {
-      console.error('Error getting chat response:', error)
-      return "I apologize, but I'm experiencing technical difficulties right now. Please try again later.";
-    }
+    return text;
   }
 }
 

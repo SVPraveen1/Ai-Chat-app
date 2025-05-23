@@ -238,18 +238,18 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
   };
 
   return (
-    <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col relative">
+    <div className="w-80 bg-slate-800 border-r border-slate-700 flex flex-col relative">
       {/* Processing Overlay */}
       <ActionProcessingOverlay />
       
       {/* Header */}
-      <div className="p-4 border-b border-gray-700">
+      <div className="p-4 border-b border-slate-700">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-white">Chats</h2>
           <Button
             onClick={onNewConversation}
             size="sm"
-            className="bg-purple-600 hover:bg-purple-700"
+            className="bg-blue-600 hover:bg-blue-700"
           >
             <Plus className="w-4 h-4" />
           </Button>
@@ -260,12 +260,12 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
       <ScrollArea className="flex-1">
         {conversations.length === 0 ? (
           <div className="p-6 text-center">
-            <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-400 mb-4">No conversations yet</p>
+            <MessageSquare className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+            <p className="text-slate-400 mb-4">No conversations yet</p>
             <Button
               onClick={onNewConversation}
               variant="outline"
-              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
             >
               Start a new chat
             </Button>
@@ -280,13 +280,13 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
                 whileHover={{ scale: 1.02 }}
                 className={`p-3 rounded-lg cursor-pointer mb-2 transition-colors ${
                   selectedConversationId === conversation.id
-                    ? 'bg-purple-600'
-                    : 'bg-gray-700 hover:bg-gray-600'
+                    ? 'bg-blue-600'
+                    : 'bg-slate-700 hover:bg-slate-600'
                 }`}
                 onClick={() => onSelectConversation(conversation.id)}
               >
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
+                  <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-full flex items-center justify-center">
                     <span className="text-sm font-semibold text-white">
                       {conversation.other_user.username.charAt(0).toUpperCase()}
                     </span>

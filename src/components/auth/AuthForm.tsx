@@ -63,24 +63,24 @@ const AuthForm: React.FC<AuthFormProps> = ({ isLogin: initialIsLogin = true }) =
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        <Card className="bg-gray-800/90 backdrop-blur-lg border-gray-700 shadow-2xl">
+        <Card className="bg-slate-800/90 backdrop-blur-lg border-slate-700 shadow-2xl">
           <CardHeader className="text-center pb-2">
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center">
                 <MessageCircle className="w-8 h-8 text-white" />
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
               Copilot Chat AI
             </CardTitle>
-            <p className="text-gray-400 text-sm">
+            <p className="text-slate-400 text-sm">
               {isLogin ? 'Welcome back!' : 'Create your account'}
             </p>
           </CardHeader>
@@ -96,7 +96,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ isLogin: initialIsLogin = true }) =
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       required={!isLogin}
-                      className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
+                      className="bg-slate-700 border-slate-600 text-white placeholder-slate-400 focus:border-blue-500"
                     />
                   </div>
                   <div>
@@ -105,7 +105,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ isLogin: initialIsLogin = true }) =
                       placeholder="Full Name (optional)"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
+                      className="bg-slate-700 border-slate-600 text-white placeholder-slate-400 focus:border-blue-500"
                     />
                   </div>
                 </>
@@ -118,7 +118,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ isLogin: initialIsLogin = true }) =
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
+                  className="bg-slate-700 border-slate-600 text-white placeholder-slate-400 focus:border-blue-500"
                 />
               </div>
 
@@ -129,12 +129,12 @@ const AuthForm: React.FC<AuthFormProps> = ({ isLogin: initialIsLogin = true }) =
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500 pr-10"
+                  className="bg-slate-700 border-slate-600 text-white placeholder-slate-400 focus:border-blue-500 pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -143,7 +143,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ isLogin: initialIsLogin = true }) =
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 rounded-lg transition-all duration-200"
+                className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-3 rounded-lg transition-all duration-200"
               >
                 {loading ? (
                   <div className="flex items-center space-x-2">
@@ -165,7 +165,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ isLogin: initialIsLogin = true }) =
                     navigate('/login');
                   }
                 }}
-                className="text-purple-400 hover:text-purple-300 text-sm transition-colors"
+                className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
               >
                 {isLogin 
                   ? "Don't have an account? Sign up" 
