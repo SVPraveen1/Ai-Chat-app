@@ -1,13 +1,18 @@
-
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Search, MessageSquare } from 'lucide-react'
+import { Plus, Search, MessageSquare, MoreVertical, Trash2, Eraser } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 interface Conversation {
   id: string
@@ -35,6 +40,7 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
   const { toast } = useToast()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
+  const [isActionProcessing, setIsActionProcessing] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -117,6 +123,98 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
       return date.toLocaleDateString()
     }
   }
+  
+  const handleClearChat = async (conversationId: string, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent triggering the conversation selection
+    if (isActionProcessing) return
+    
+    setIsActionProcessing(true)
+    try {
+      // Delete all messages in the conversation but keep the conversation
+      const { error } = await supabase
+        .from('messages')
+        .delete()
+        .eq('conversation_id', conversationId)
+      
+      if (error) throw error
+      
+      // Update the conversation's last message
+      await supabase
+        .from('conversations')
+        .update({ 
+          last_message: null,
+          last_message_at: null
+        })
+        .eq('id', conversationId)
+      
+      // Refresh the conversation list
+      fetchConversations()
+      
+      toast({
+        title: 'Chat cleared',
+        description: 'All messages have been removed from this chat',
+      })
+    } catch (error) {
+      console.error('Error clearing chat:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to clear chat',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsActionProcessing(false)
+    }
+  }
+  
+  const handleDeleteChat = async (conversationId: string, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent triggering the conversation selection
+    if (isActionProcessing) return
+    
+    setIsActionProcessing(true)
+    try {
+      // Delete all messages first (foreign key constraint)
+      await supabase
+        .from('messages')
+        .delete()
+        .eq('conversation_id', conversationId)
+      
+      // Delete all participants
+      await supabase
+        .from('participants')
+        .delete()
+        .eq('conversation_id', conversationId)
+      
+      // Finally delete the conversation
+      const { error } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('id', conversationId)
+      
+      if (error) throw error
+      
+      // Remove from local state
+      setConversations(conversations.filter(conv => conv.id !== conversationId))
+      
+      // If this was the selected conversation, reset selection
+      if (selectedConversationId === conversationId) {
+        onSelectConversation('')
+      }
+      
+      toast({
+        title: 'Chat deleted',
+        description: 'The conversation has been permanently deleted',
+      })
+    } catch (error) {
+      console.error('Error deleting chat:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to delete chat',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsActionProcessing(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -125,9 +223,25 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
       </div>
     )
   }
+  
+  // Processing overlay for actions like clearing or deleting chats
+  const ActionProcessingOverlay = () => {
+    if (!isActionProcessing) return null;
+    return (
+      <div className="absolute inset-0 bg-gray-900/70 flex items-center justify-center z-50">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-400 mb-2"></div>
+          <p className="text-purple-400 text-sm font-medium">Processing...</p>
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
+    <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col relative">
+      {/* Processing Overlay */}
+      <ActionProcessingOverlay />
+      
       {/* Header */}
       <div className="p-4 border-b border-gray-700">
         <div className="flex items-center justify-between mb-4">
@@ -182,9 +296,41 @@ const ConversationsList: React.FC<ConversationsListProps> = ({
                       <p className="text-sm font-medium text-white truncate">
                         {conversation.other_user.full_name || conversation.other_user.username}
                       </p>
-                      <span className="text-xs text-gray-400">
-                        {formatTime(conversation.last_message_at)}
-                      </span>
+                      <div className="flex items-center space-x-1">
+                        <span className="text-xs text-gray-400">
+                          {formatTime(conversation.last_message_at)}
+                        </span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-7 w-7 p-0 rounded-full hover:bg-gray-700"
+                            >
+                              <MoreVertical className="h-4 w-4 text-gray-400" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent 
+                            align="end"
+                            className="w-48 bg-gray-900 border-gray-700 text-gray-100"
+                          >
+                            <DropdownMenuItem
+                              className="flex items-center cursor-pointer hover:bg-gray-800"
+                              onClick={(e) => handleClearChat(conversation.id, e)}
+                            >
+                              <Eraser className="mr-2 h-4 w-4 text-gray-400" />
+                              <span>Clear chat</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="flex items-center text-red-500 cursor-pointer hover:bg-gray-800"
+                              onClick={(e) => handleDeleteChat(conversation.id, e)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              <span>Delete chat</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                     <p className="text-xs text-gray-300 truncate">
                       {conversation.last_message || 'No messages yet'}

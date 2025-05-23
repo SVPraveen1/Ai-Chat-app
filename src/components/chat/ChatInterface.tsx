@@ -212,7 +212,7 @@ const ChatInterface = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-900 text-white overflow-hidden">
+    <div className="flex h-[calc(100vh-16px)] bg-gray-900 text-white overflow-hidden">
       {/* Mobile Sidebar Overlay */}
       {showMobileSidebar && (
         <div 
@@ -302,7 +302,7 @@ const ChatInterface = () => {
             </div>
 
             {/* Messages Area */}
-            <ScrollArea className="flex-1 p-4" onMouseUp={handleTextSelection}>
+            <ScrollArea className="flex-1 p-4 pb-2" onMouseUp={handleTextSelection}>
               <div className="space-y-4 max-w-4xl mx-auto">
                 <AnimatePresence>
                   {messages.map((message) => (
@@ -328,7 +328,7 @@ const ChatInterface = () => {
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
                       placeholder="Type a message..."
-                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-3 pr-12 resize-none max-h-32 min-h-[48px] focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-3 pr-12 resize-none max-h-28 min-h-[48px] focus:outline-none focus:ring-2 focus:ring-purple-500 scrollbar-thin scrollbar-thumb-purple-600/40 scrollbar-track-transparent"
                       rows={1}
                     />
                     <div className="absolute right-2 top-2 flex space-x-1">
@@ -383,7 +383,7 @@ const ChatInterface = () => {
       {/* AI Copilot Sidebar - Desktop Only */}
       <AnimatePresence>
         {showAICopilot && selectedConversationId && (
-          <div className="hidden md:flex">
+          <div className="hidden md:block h-full">
             <AICopilot
               selectedText={selectedText}
               onInsertText={insertTextAtCursor}

@@ -132,6 +132,27 @@ Keep the analysis under 150 words and make it actionable.`
     }
   }
 
+  async translateText(text: string, targetLanguage: string, context?: string): Promise<string> {
+    try {
+      let prompt = `Translate this text to ${targetLanguage}:
+"${text}"`
+
+      if (context) {
+        prompt += `\n\nContext from recent conversation:
+${context}
+
+Translate with appropriate tone based on the context.`
+      }
+
+      const result = await this.model.generateContent(prompt)
+      const response = await result.response
+      return response.text().trim()
+    } catch (error) {
+      console.error('Error translating text:', error)
+      throw new Error('Failed to translate text')
+    }
+  }
+
   async enhanceMessage(message: string, context: string[]): Promise<string> {
     try {
       const conversationContext = context.slice(-3).join('\n')
