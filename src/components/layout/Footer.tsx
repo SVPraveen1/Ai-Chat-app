@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MessageSquare, Github, Twitter, Mail } from 'lucide-react';
+import { MessageSquare, Github } from 'lucide-react';
 
 function Footer() {
   return (
@@ -35,15 +35,12 @@ function Footer() {
           <div className="text-center md:text-right">
             <h3 className="font-bold text-white mb-3">Connect</h3>
             <div className="flex justify-center md:justify-end space-x-4">
-              <a href="#" className="text-gray-400 hover:text-purple-400">
+              <a href="https://github.com/SVPraveen1/ai-chat-app" className="text-gray-400 hover:text-purple-400">
                 <Github className="h-5 w-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-purple-400">
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a href="mailto:contact@copilotchat.ai" className="text-gray-400 hover:text-purple-400">
+              {/* <a href="mailto:shyamkaruparthi@gmail.com" className="text-gray-400 hover:text-purple-400">
                 <Mail className="h-5 w-5" />
-              </a>
+              </a> */}
             </div>
           </div>
         </div>
