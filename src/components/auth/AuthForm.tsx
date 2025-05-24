@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -24,6 +23,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ isLogin: initialIsLogin = true }) =
   const { signIn, signUp } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    setIsLogin(initialIsLogin);
+  }, [initialIsLogin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
