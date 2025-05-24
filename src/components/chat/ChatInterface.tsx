@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Send, Smile, Bot, User, Menu, Settings, MessageSquareText } from 'lucide-react' // Added MessageSquareText
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { motion, AnimatePresence, useAnimation } from 'framer-motion'
+import { Send, Smile, Bot, User, Settings, MessageSquareText } from 'lucide-react' // Added MessageSquareText
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { supabase } from '@/integrations/supabase/client'
@@ -12,7 +12,9 @@ import ConversationsList from './ConversationsList'
 import UserSearch from './UserSearch'
 import { useToast } from '@/hooks/use-toast'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Menu } from 'lucide-react'
+import { chatSidebarVariants, messageVariants, typingIndicatorVariants } from '@/animations/chatAnimations'
+import { fadeIn, slideIn } from '@/animations'
 
 interface Message {
   id: string
@@ -51,6 +53,20 @@ const ChatInterface = () => {
   const [sidebarExpanded, setSidebarExpanded] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
+  const controls = useAnimation()
+  const sidebarControls = useAnimation()
+  
+  // Animation variants for the chat container
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05,
+        when: "beforeChildren"
+      }
+    }
+  }
 
   // State for the "Ask AI" popup
   const [askAiPopupState, setAskAiPopupState] = useState<AskAiPopupState>({ visible: false, text: '', position: { x: 0, y: 0 } });
@@ -324,217 +340,222 @@ const ChatInterface = () => {
         <div 
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setShowMobileSidebar(false)}
-        />
+        >
+          <div className="flex items-center space-x-2 p-4">
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center">
+              <User className="w-4 h-4 text-white" />
+            </div>
+            {sidebarExpanded && <h2 className="font-semibold">Copilot Chat</h2>}
+          </div>
+        </div>
       )}
+      
+      {/* Sidebar/Conversations Panel */}
+      <Collapsible 
+        className="h-full bg-gray-900 border-r border-gray-800"
+        open={sidebarExpanded}
+        onOpenChange={setSidebarExpanded}
+      >
+        <CollapsibleContent>
+          {/* Conversations */}
+          <div className="flex-1 overflow-hidden">
+            {showUserSearch ? (
+              <UserSearch
+                onBack={() => setShowUserSearch(false)}
+                onConversationCreated={handleConversationCreated}
+              />
+            ) : (
+              <ConversationsList
+                selectedConversationId={selectedConversationId}
+                onSelectConversation={handleSelectConversation}
+                onNewConversation={handleNewConversation}
+              />
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
-      {/* Sidebar */}
-      <div className={`
-        ${showMobileSidebar ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0 fixed lg:relative z-50 lg:z-auto
-        transition-transform duration-300 ease-in-out
-        ${sidebarExpanded ? 'w-80' : 'w-16'}
-        bg-slate-800 border-r border-slate-700 flex flex-col h-full
-      `}>
-        {/* Sidebar Header */}
-        <Collapsible open={sidebarExpanded} onOpenChange={setSidebarExpanded}>
-          <CollapsibleTrigger asChild>
-            <div className="p-4 border-b border-slate-700 cursor-pointer hover:bg-slate-700/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center">
-                    <User className="w-4 h-4 text-white" />
-                  </div>
-                  {sidebarExpanded && <h2 className="font-semibold">Copilot Chat</h2>}
-                </div>
-                {sidebarExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-              </div>
-            </div>
-          </CollapsibleTrigger>
-
-          <CollapsibleContent>
-            {/* Conversations */}
-            <div className="flex-1 overflow-hidden">
-              {showUserSearch ? (
-                <UserSearch
-                  onBack={() => setShowUserSearch(false)}
-                  onConversationCreated={handleConversationCreated}
-                />
-              ) : (
-                <ConversationsList
-                  selectedConversationId={selectedConversationId}
-                  onSelectConversation={handleSelectConversation}
-                  onNewConversation={handleNewConversation}
-                />
-              )}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-      </div>
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {selectedConversationId ? (
-          <>
-            {/* Header */}
-            <div className="bg-gray-800 p-4 border-b border-gray-700 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowMobileSidebar(!showMobileSidebar)}
-                  className="lg:hidden text-gray-400 hover:text-white"
-                >
-                  <Menu className="w-5 h-5" />
-                </Button>
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-semibold">{currentProfile?.username?.[0]?.toUpperCase() || 'C'}</span>
-                </div>
-                <div>
-                  <h2 className="font-semibold">{currentProfile?.username || 'User'}</h2>
-                  <p className="text-sm text-green-400">Active</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAICopilot(!showAICopilot)}
-                  className={`md:flex ${showAICopilot ? 'text-purple-400' : 'text-gray-400'} hover:text-purple-300`}
-                >
-                  <Bot className="w-5 h-5 mr-1" />
-                  AI Copilot
-                </Button>
-              </div>
-            </div>
-
-            {/* Messages Area */}
-            <ScrollArea className="flex-1 p-4 pb-2" onMouseUp={handleTextSelection}> {/* Pass event to handleTextSelection */}
-              <div className="space-y-4 max-w-4xl mx-auto">
-                <AnimatePresence>
-                  {messages.map((message) => (
-                    <MessageBubble
-                      key={message.id}
-                      message={message}
-                      isOwn={message.user_id === user?.id}
-                    />
-                  ))}
-                </AnimatePresence>
-                <div ref={messagesEndRef} />
-              </div>
-            </ScrollArea>
-
-            {/* Message Input */}
-            <div className="bg-slate-800 p-4 border-t border-slate-700">
-              <div className="max-w-4xl mx-auto">
-                <div className="flex items-end space-x-2">
-                  <div className="flex-1 relative">
-                    <textarea
-                      ref={textAreaRef}
-                      value={newMessage}
-                      onChange={(e) => {
-                        setNewMessage(e.target.value)
-                        // Auto-resize the textarea based on content
-                        e.target.style.height = 'auto'
-                        e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`
-                      }}
-                      onKeyPress={handleKeyPress}
-                      placeholder="Type a message..."
-                      className="w-full bg-slate-700 text-white rounded-lg px-4 py-3 pr-12 resize-none max-h-28 min-h-[48px] focus:outline-none focus:ring-2 focus:ring-blue-500 scrollbar-thin scrollbar-thumb-blue-600/40 scrollbar-track-transparent"
-                      rows={1}
-                    />
-                    <div className="absolute right-2 top-2 flex space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowEmojiSelector(!showEmojiSelector)}
-                        className="text-slate-400 hover:text-yellow-400 p-1"
-                      >
-                        <Smile className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    {showEmojiSelector && (
-                      <div className="absolute bottom-12 right-0 z-10">
-                        <EmojiSelector onEmojiSelect={handleEmojiSelect} />
-                      </div>
-                    )}
-                  </div>
-                  <Button
-                    onClick={sendMessage}
-                    disabled={!newMessage.trim()}
-                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-3"
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </>
-        ) : (
-          // Welcome screen
-          <div className="flex-1 flex items-center justify-center p-4">
-            <div className="text-center max-w-md">
-              <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                <User className="w-10 h-10 text-white" />
-              </div>
-              <h2 className="text-2xl font-semibold mb-2">
-                Welcome, {currentProfile?.full_name || currentProfile?.username}!
-              </h2>
-              <p className="text-gray-400 mb-6">Select a conversation to start messaging</p>
+    {/* Main Chat Area */}
+    <motion.div 
+      className="flex-1 flex flex-col h-full overflow-hidden"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      {selectedConversationId ? (
+        <>
+          {/* Header */}
+          <div className="bg-gray-800 p-4 border-b border-gray-700 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
               <Button
-                onClick={handleNewConversation}
-                className="bg-purple-600 hover:bg-purple-700"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowMobileSidebar(!showMobileSidebar)}
+                className="lg:hidden text-gray-400 hover:text-white"
               >
-                Start New Chat
+                <Menu className="w-5 h-5" />
+              </Button>
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                <span className="text-sm font-semibold">{currentProfile?.username?.[0]?.toUpperCase() || 'C'}</span>
+              </div>
+              <div>
+                <h2 className="font-semibold">{currentProfile?.username || 'User'}</h2>
+                <p className="text-sm text-green-400">Active</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAICopilot(!showAICopilot)}
+                className={`md:flex ${showAICopilot ? 'text-purple-400' : 'text-gray-400'} hover:text-purple-300`}
+              >
+                <Bot className="w-5 h-5 mr-1" />
+                AI Copilot
               </Button>
             </div>
           </div>
-        )}
-      </div>
 
-      {/* "Ask AI" Popup */}
-      {askAiPopupState.visible && (
-        <motion.div
-          initial={{ opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -5 }}
-          transition={{ duration: 0.2 }}
-          className="ask-ai-popup-class fixed bg-gray-700/95 backdrop-blur-sm border border-purple-400 rounded-lg shadow-xl p-3 z-[100] flex flex-col animate-fadeIn"
-          style={{ 
-            top: askAiPopupState.position.y, 
-            left: askAiPopupState.position.x,
-            maxWidth: '330px',
-            boxShadow: '0 4px 20px rgba(124, 58, 237, 0.25)'
-          }}
-        >
-          <div className="mb-2">
-            <p className="text-xs text-purple-300 font-medium">Selected Text:</p>
-            <p className="text-sm text-gray-200 max-h-16 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-purple-600/40 scrollbar-track-transparent">
-              "{askAiPopupState.text.length > 100 ? askAiPopupState.text.substring(0, 100) + '...' : askAiPopupState.text}"
-            </p>
-          </div>
-          <div className="flex items-center justify-between space-x-2">
-            <Button 
-              size="sm"
-              variant="default"
-              onClick={handleAskAiClick}
-              className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 flex-1"
+          {/* Messages Area */}
+          <ScrollArea className="flex-1 p-4 overflow-y-auto">
+            <motion.div 
+              className="space-y-4"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
             >
-              <MessageSquareText className="w-4 h-4 mr-1.5" />
-              Ask AI Copilot
-            </Button>
-            <Button 
-              size="sm"
-              variant="ghost"
-              onClick={() => setAskAiPopupState({ visible: false, text: '', position: { x: 0, y: 0 } })}
-              className="text-gray-400 hover:text-white h-8 px-2"
+              <AnimatePresence mode="popLayout">
+                {messages.map((message, index) => (
+                  <motion.div
+                    key={message.id}
+                    custom={index}
+                    variants={messageVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    layout
+                  >
+                    <MessageBubble
+                      message={message}
+                      isOwn={message.user_id === user?.id}
+                    />
+                  </motion.div>
+                ))}
+                <div ref={messagesEndRef} />
+              </AnimatePresence>
+            </motion.div>
+          </ScrollArea>
+
+          {/* Message Input */}
+          <div className="bg-slate-800 p-4 border-t border-slate-700">
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-end space-x-2">
+                <div className="flex-1 relative">
+                  <textarea
+                    ref={textAreaRef}
+                    value={newMessage}
+                    onChange={(e) => {
+                      setNewMessage(e.target.value)
+                      // Auto-resize the textarea based on content
+                      e.target.style.height = 'auto'
+                      e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`
+                    }}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Type a message..."
+                    className="w-full bg-slate-700 text-white rounded-lg px-4 py-3 pr-12 resize-none max-h-28 min-h-[48px] focus:outline-none focus:ring-2 focus:ring-blue-500 scrollbar-thin scrollbar-thumb-blue-600/40 scrollbar-track-transparent"
+                    rows={1}
+                  />
+                  <div className="absolute right-2 top-2 flex space-x-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowEmojiSelector(!showEmojiSelector)}
+                      className="text-slate-400 hover:text-yellow-400 p-1"
+                    >
+                      <Smile className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  {showEmojiSelector && (
+                    <div className="absolute bottom-12 right-0 z-10">
+                      <EmojiSelector onEmojiSelect={handleEmojiSelect} />
+                    </div>
+                  )}
+                </div>
+                <Button
+                  onClick={sendMessage}
+                  disabled={!newMessage.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-3"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        // Welcome screen
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="text-center max-w-md">
+            <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <User className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="text-2xl font-semibold mb-2">
+              Welcome, {currentProfile?.full_name || currentProfile?.username}!
+            </h2>
+            <p className="text-gray-400 mb-6">Select a conversation to start messaging</p>
+            <Button
+              onClick={handleNewConversation}
+              className="bg-purple-600 hover:bg-purple-700"
             >
-              Dismiss
+              Start New Chat
             </Button>
           </div>
-        </motion.div>
+        </div>
       )}
+    </motion.div>
 
-      {/* AI Copilot Sidebar - Desktop Only */}
+    {/* "Ask AI" Popup */}
+    {askAiPopupState.visible && (
+      <motion.div
+        initial={{ opacity: 0, y: -5 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -5 }}
+        transition={{ duration: 0.2 }}
+        className="ask-ai-popup-class fixed bg-gray-700/95 backdrop-blur-sm border border-purple-400 rounded-lg shadow-xl p-3 z-[100] flex flex-col animate-fadeIn"
+        style={{ 
+          top: askAiPopupState.position.y, 
+          left: askAiPopupState.position.x,
+          maxWidth: '330px',
+          boxShadow: '0 4px 20px rgba(124, 58, 237, 0.25)'
+        }}
+      >
+        <div className="mb-2">
+          <p className="text-xs text-purple-300 font-medium">Selected Text:</p>
+          <p className="text-sm text-gray-200 max-h-16 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-purple-600/40 scrollbar-track-transparent">
+            "{askAiPopupState.text.length > 100 ? askAiPopupState.text.substring(0, 100) + '...' : askAiPopupState.text}"
+          </p>
+        </div>
+        <div className="flex items-center justify-between space-x-2">
+          <Button 
+            size="sm"
+            variant="default"
+            onClick={handleAskAiClick}
+            className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-3 flex-1"
+          >
+            <MessageSquareText className="w-4 h-4 mr-1.5" />
+            Ask AI Copilot
+          </Button>
+          <Button 
+            size="sm"
+            variant="ghost"
+            onClick={() => setAskAiPopupState({ visible: false, text: '', position: { x: 0, y: 0 } })}
+            className="text-gray-400 hover:text-white h-8 px-2"
+          >
+            Dismiss
+          </Button>
+        </div>
+      </motion.div>
+    )}
       <AnimatePresence>
         {showAICopilot && selectedConversationId && (
           <div className="hidden md:block h-full">
@@ -555,3 +576,4 @@ const ChatInterface = () => {
 }
 
 export default ChatInterface
+
